@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='riakalchemy',
-    version='0.1a',
+    version='0.1a1',
     description='Object Mapper for Riak',
     author='Soren Hansen',
     license='LGPL',
