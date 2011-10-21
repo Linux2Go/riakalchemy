@@ -1,4 +1,6 @@
 class RiakType(object):
+    link_type = False
+
     def __init__(self, required=False):
         self.required = required
 
@@ -14,3 +16,6 @@ class String(RiakType):
 class Integer(RiakType):
     def clean(self, value):
         return int(value)
+
+class RelatedObjects(RiakType):
+    link_type = True

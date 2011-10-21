@@ -3,7 +3,7 @@ import unittest
 import riakalchemy
 from riakalchemy import RiakObject
 from riakalchemy.exceptions import ValidationError
-from riakalchemy.types import String, Integer
+from riakalchemy.types import String, Integer, RelatedObjects
 
 class BasicTests(unittest.TestCase):
     test_server_started = False
@@ -110,3 +110,24 @@ class BasicTests(unittest.TestCase):
         self.assertRaises(ValidationError, user.save)
         user.first_name = 'soren'
         user.save()
+
+    def test_one_relation(self):
+        class Person(RiakObject):
+            bucket_name = 'users'
+            searchable = True
+
+            first_name = String(required=True)
+            last_name = String()
+            manager = RelatedObjects()
+
+        user1 = Person(first_name='jane', last_name='smith')
+        user1.save()
+        user2 = Person(first_name='john', last_name='smith')
+        user2.manager = [user1]
+        user2.save()
+        user2_key = user2.key
+        user2 = Person.get(user2_key)
+        user2_manager = user2.manager[0]
+        self.assertEquals(user2_manager.first_name, 'jane')
+        self.assertEquals(user2_manager.last_name, 'smith')
+
