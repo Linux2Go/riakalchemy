@@ -10,6 +10,9 @@ class RiakType(object):
     def validate(self, value):
         return True
 
+class Dict(RiakType):
+    pass
+
 class String(RiakType):
     pass
 
