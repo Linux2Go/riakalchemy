@@ -1,7 +1,7 @@
 __version__ = '0.1a'
 
 import json
-from riakalchemy.exceptions import ValidationError
+from riakalchemy.exceptions import ValidationError, NoSuchObjectError
 from riakalchemy.types import RiakType
 import riak
 from riak.mapreduce import RiakLink
@@ -75,6 +75,12 @@ class RiakObject(object):
         for k, v in d.iteritems():
             setattr(self, k, v)
 
+    def post_save(self):
+        pass
+
+    def pre_save(self):
+        pass
+
     def clean(self):
         if self._riak_obj:
             links = self._riak_obj.get_links()
@@ -110,6 +116,8 @@ class RiakObject(object):
         if key:
             bucket = client.bucket(cls.bucket_name)
             obj = bucket.get(key)
+            if not obj.exists():
+                raise NoSuchObjectError()
             return cls.load(obj)
 
         if cls.searchable:
@@ -134,12 +142,23 @@ class RiakObject(object):
                           }
                           return [];
                       }""" % (terms,)
-
-        print map_func
         query.map(map_func)
         return RiakObjectQuery(query, cls, False)
 
+    def pre_delete(self):
+        pass
+
+    def post_delete(self):
+        pass
+
+    def delete(self):
+        if self._riak_obj:
+            self.pre_delete()
+            self._riak_obj.delete()
+            self.post_delete()
+
     def save(self):
+        self.pre_save()
         self.clean()
         bucket = client.bucket(self.bucket_name)
 
@@ -165,6 +184,7 @@ class RiakObject(object):
 
         self._riak_obj.store()
         self.key = self._riak_obj.get_key()
+        self.post_save()
 
 class RiakObjectQuery(object):
     def __init__(self, query, cls, gives_links):

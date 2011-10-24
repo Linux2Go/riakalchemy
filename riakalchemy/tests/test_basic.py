@@ -2,7 +2,7 @@ import unittest
 
 import riakalchemy
 from riakalchemy import RiakObject
-from riakalchemy.exceptions import ValidationError
+from riakalchemy.exceptions import ValidationError, NoSuchObjectError
 from riakalchemy.types import String, Integer, RelatedObjects
 
 class BasicTests(unittest.TestCase):
@@ -15,7 +15,9 @@ class BasicTests(unittest.TestCase):
         else:
             riakalchemy._clear_test_connection()
 
-    def test_create_object(self):
+    def test_create_save_retrieve_delete(self):
+        """Create, save, retrieve, and delete an object"""
+
         class Person(RiakObject):
             bucket_name = 'users'
 
@@ -25,6 +27,27 @@ class BasicTests(unittest.TestCase):
         user = Person(first_name='soren', last_name='hansen')
         self.assertEquals(user.first_name, 'soren')
         self.assertEquals(user.last_name, 'hansen')
+        user.save()
+        user = Person.get(user.key)
+        self.assertEquals(user.first_name, 'soren')
+        self.assertEquals(user.last_name, 'hansen')
+        user.delete()
+        self.assertRaises(NoSuchObjectError, Person.get, user.key)
+
+    def test_create_save_delete(self):
+        """Create, save, and delete an object"""
+        class Person(RiakObject):
+            bucket_name = 'users'
+
+            first_name = String()
+            last_name = String()
+
+        user = Person(first_name='soren', last_name='hansen')
+        self.assertEquals(user.first_name, 'soren')
+        self.assertEquals(user.last_name, 'hansen')
+        user.save()
+        user.delete()
+        self.assertRaises(NoSuchObjectError, Person.get, user.key)
 
     def test_integer_clean(self):
         class Person(RiakObject):
@@ -49,21 +72,6 @@ class BasicTests(unittest.TestCase):
 
         user = Person(first_name='soren', last_name='hansen', age='foobar')
         self.assertRaises(ValueError, user.clean)
-
-    def test_store_retrieve(self):
-        class Person(RiakObject):
-            bucket_name = 'users'
-
-            first_name = String()
-            last_name = String()
-            age = Integer()
-
-        user = Person(first_name='soren', last_name='hansen', age=31)
-        user.save()
-        user = Person.get(user.key)
-        self.assertEquals(user.first_name, 'soren')
-        self.assertEquals(user.last_name, 'hansen')
-        self.assertEquals(user.age, 31)
 
     def test_store_retrieve_expensive(self):
         class Person(RiakObject):
@@ -111,7 +119,7 @@ class BasicTests(unittest.TestCase):
         user.first_name = 'soren'
         user.save()
 
-    def test_one_relation(self):
+    def test_relation(self):
         class Person(RiakObject):
             bucket_name = 'users'
             searchable = True
@@ -131,3 +139,52 @@ class BasicTests(unittest.TestCase):
         self.assertEquals(user2_manager.first_name, 'jane')
         self.assertEquals(user2_manager.last_name, 'smith')
 
+    def test_pre_post_hooks(self):
+        global post_save_has_run, pre_delete_has_run, post_delete_has_run
+        post_save_has_run = False
+        pre_delete_has_run = False
+        post_delete_has_run = False
+
+        class Person(RiakObject):
+            bucket_name = 'users'
+            searchable = True
+
+            first_name = String()
+            last_name = String()
+
+            def pre_save(self):
+                self.first_name = self.first_name.upper()
+
+            def post_save(self):
+                global post_save_has_run
+                post_save_has_run = True
+
+            def pre_delete(self):
+                global pre_delete_has_run
+                if not pre_delete_has_run:
+                    pre_delete_has_run = True
+                    raise Exception("Don't save this")
+
+            def post_delete(self):
+                global post_delete_has_run
+                post_delete_has_run = True
+
+        user = Person(first_name='jane', last_name='smith')
+        user.save()
+        self.assertTrue(post_save_has_run)
+        # Verify that the hook is run
+        self.assertEquals(user.first_name, 'JANE')
+
+        # ..and verify that it was run before we stored the object
+        user = Person.get(user.key)
+        self.assertEquals(user.first_name, 'JANE')
+
+        # First delete should be prevented by the exception
+        self.assertRaises(Exception, user.delete)
+        user = Person.get(user.key)
+
+        # Second delete should go through just fine
+        user.delete()
+        self.assertRaises(NoSuchObjectError, Person.get, user.key)
+
+        self.assertTrue(post_delete_has_run)
