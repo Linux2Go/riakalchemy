@@ -105,7 +105,11 @@ class RiakObject(object):
                 for link in value:
                     links += [RiakLink(link.bucket_name, link.key, tag=field)]
             else:
-                setattr(self, field, self._meta[field].clean(getattr(self, field)))
+                setattr(self,
+                        field,
+                        self._meta[field].clean(getattr(self,
+                                                        field,
+                                                        None)))
 
             if hasattr(self, field):
                 self._meta[field].validate(getattr(self, field))

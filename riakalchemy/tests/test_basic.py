@@ -62,6 +62,16 @@ class BasicTests(unittest.TestCase):
         user.clean()
         self.assertEquals(user.age, 32)
 
+    def test_not_all_fields_set(self):
+        class Person(RiakObject):
+            bucket_name = 'users'
+
+            first_name = String()
+            last_name = String()
+            age = Integer()
+
+        Person(first_name='soren', age=30)
+
     def test_integer_validation(self):
         class Person(RiakObject):
             bucket_name = 'users'
