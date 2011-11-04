@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='riakalchemy',
-    version='0.1a1',
+    version='0.1a2',
     description='Object Mapper for Riak',
     author='Soren Hansen',
     license='LGPL',
