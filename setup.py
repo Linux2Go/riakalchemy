@@ -12,6 +12,7 @@ setup(
     url='https://launchpad.net/riakalchemy',
     packages=['riakalchemy'],
     install_requires=['riak'],
+    test_suite = 'nose.collector',
     classifiers = [
         'Development Status :: 1 - Planning',
         'Intended Audience :: Developers',
