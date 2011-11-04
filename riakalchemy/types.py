@@ -22,3 +22,6 @@ class Integer(RiakType):
 
 class RelatedObjects(RiakType):
     link_type = True
+    def __init__(self, backref=False, **kwargs):
+        super(RelatedObjects, self).__init__(**kwargs)
+        self.backref = backref

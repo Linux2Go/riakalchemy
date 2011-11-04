@@ -45,14 +45,16 @@ class RiakObject(object):
     searchable = False
 
     def __init__(self, **kwargs):
+        self._links = []
+        self.key = None
         self.update(kwargs)
         self._riak_obj = None
-        self.key = None
 
     @classmethod
     def load(cls, riak_obj):
         obj = cls(**riak_obj.get_data())
         obj.key = riak_obj.get_key()
+        obj._links = riak_obj.get_links()
         obj._riak_obj = riak_obj
         return obj
 
@@ -75,22 +77,12 @@ class RiakObject(object):
         for k, v in d.iteritems():
             setattr(self, k, v)
 
-    def post_save(self):
-        pass
-
-    def pre_save(self):
-        pass
-
     def clean(self):
-        if self._riak_obj:
-            links = self._riak_obj.get_links()
-        else:
-            links = []
-
         for field in self._meta:
             if self._meta[field].required and not hasattr(self, field):
                 raise ValidationError('"%s" is required, but not set' %
                                       (field,))
+
             if self._meta[field].link_type:
                 value = getattr(self, field, [])
                 for rel in value:
@@ -98,22 +90,21 @@ class RiakObject(object):
                         raise ValidationError('%s attribute of %s must be another '
                                               'RiakObject' %
                                               (field, self.__class__.__name__))
-                for link in links:
+
+                for link in self._links:
                     if link.get_tag() == field:
                         self._riak_obj.remove_link(link)
+                        self._links.remove(link)
 
                 for link in value:
-                    links += [RiakLink(link.bucket_name, link.key, tag=field)]
+                    self._links += [RiakLink(link.bucket_name, link.key, tag=field)]
             else:
-                setattr(self,
-                        field,
-                        self._meta[field].clean(getattr(self,
-                                                        field,
-                                                        None)))
+                if hasattr(self, field):
+                    value = self._meta[field].clean(getattr(self, field))
+                    setattr(self, field, value)
 
             if hasattr(self, field):
                 self._meta[field].validate(getattr(self, field))
-        self._links = links
 
     @classmethod
     def get(cls, key=None, **kwargs):
@@ -124,7 +115,13 @@ class RiakObject(object):
                 raise NoSuchObjectError()
             return cls.load(obj)
 
-        if cls.searchable:
+        if len(kwargs) == 1:
+            field = kwargs.keys()[0]
+            if cls._meta[field].link_type and cls._meta[field].backref:
+                  bucket = client.bucket(cls.bucket_name)
+                  index_query = client.index(cls.bucket_name, '%s_bin' % (field,), '%s/%s' % (kwargs[field].bucket_name, kwargs[field].key))
+                  return RiakObjectQuery(index_query, cls, True)
+        elif cls.searchable:
             return cls.get_search(**kwargs)
         else:
             return cls.get_mr(**kwargs)
@@ -161,6 +158,12 @@ class RiakObject(object):
             self._riak_obj.delete()
             self.post_delete()
 
+    def post_save(self):
+        pass
+
+    def pre_save(self):
+        pass
+
     def save(self):
         self.pre_save()
         self.clean()
@@ -172,7 +175,7 @@ class RiakObject(object):
             bucket.enable_search()
 
         data_dict = dict((k, getattr(self, k)) for k in self._meta
-                                                if not self._meta[k].link_type)
+                                                if not self._meta[k].link_type and hasattr(self, k))
         if self._riak_obj:
             self._riak_obj.set_data(data_dict)
         else:
@@ -185,6 +188,12 @@ class RiakObject(object):
         # ..and add the new set of links
         for l in self._links:
             self._riak_obj.add_link(l)
+
+        for field in self._meta:
+            if self._meta[field].link_type and self._meta[field].backref:
+                value = getattr(self, field)
+                for link in value:
+                    self._riak_obj.add_index('%s_bin' % (field,), '%s/%s' % (link.bucket_name, link.key))
 
         self._riak_obj.store()
         self.key = self._riak_obj.get_key()
