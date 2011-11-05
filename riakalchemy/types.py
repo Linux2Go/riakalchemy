@@ -1,3 +1,5 @@
+from riakalchemy.exceptions import ValidationError
+
 class RiakType(object):
     link_type = False
 
@@ -18,7 +20,10 @@ class String(RiakType):
 
 class Integer(RiakType):
     def clean(self, value):
-        return int(value)
+        try:
+            return int(value)
+        except ValueError:
+            raise ValidationError("%r could not be cast to integer" % (value,))
 
 class RelatedObjects(RiakType):
     link_type = True

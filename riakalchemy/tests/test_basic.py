@@ -21,133 +21,142 @@ class BasicTests(unittest.TestCase):
     test_server_started = False
 
     def setUp(self):
-        if not use_system_riak:
-            if  not self.__class__.test_server_started:
-                riakalchemy.connect(test_server=True, port=riak_port)
-                self.__class__.test_server_started = True
-            else:
-                riakalchemy._clear_test_connection()
+        if not use_system_riak and not self.__class__.test_server_started:
+            riakalchemy.connect(test_server=True, port=riak_port)
+            self.__class__.test_server_started = True
         else:
             riakalchemy.connect(test_server=False, port=riak_port)
 
-    def test_create_save_retrieve_delete(self):
-        """Create, save, retrieve, and delete an object"""
-
-        class Person1(RiakObject):
+    def _create_class(self, searchable=False, last_name_required=False):
+        _searchable = searchable
+        class Person(RiakObject):
+            searchable = _searchable
             bucket_name = 'users1'
 
             first_name = String()
-            last_name = String()
+            last_name = String(required=last_name_required)
+            age = Integer()
 
-        user = Person1(first_name='soren', last_name='hansen')
-        self.assertEquals(user.first_name, 'soren')
-        self.assertEquals(user.last_name, 'hansen')
-        user.save()
-        user = Person1.get(user.key)
-        self.assertEquals(user.first_name, 'soren')
-        self.assertEquals(user.last_name, 'hansen')
-        user.delete()
-        self.assertRaises(NoSuchObjectError, Person1.get, user.key)
+        return Person
 
-    def test_create_save_delete(self):
-        """Create, save, and delete an object"""
-        class Person2(RiakObject):
-            bucket_name = 'users2'
+    def _create_object(self, searchable=False,
+                       last_name_required=False, **kwargs):
+        Person = self._create_class(searchable=searchable,
+                                    last_name_required=last_name_required)
+        person = Person(**kwargs)
+        return Person, person
 
-            first_name = String()
-            last_name = String()
+    def test_create_object(self):
+        """Can create object"""
+        self._create_object()
 
-        user = Person2(first_name='soren', last_name='hansen')
-        self.assertEquals(user.first_name, 'soren')
-        self.assertEquals(user.last_name, 'hansen')
-        user.save()
-        user.delete()
-        self.assertRaises(NoSuchObjectError, Person2.get, user.key)
+    def _incomplete_value_set(self):
+        return {'first_name': 'soren',
+                'age': 31 }
+
+    def _set_values_on_init(self, values, searchable=False,
+                            last_name_required=False):
+        return self._create_object(searchable=searchable,
+                                   last_name_required=last_name_required,
+                                   **values)
+
+    def _create_object_and_update(self, values):
+        cls, obj = self._create_object()
+        obj.update(values)
+        return cls, obj
+
+    def _object_create_and_setattr(self, values):
+        cls, obj = self._create_object()
+        for k,v in values.iteritems():
+            setattr(obj, k, v)
+        return cls, obj
+
+    def _verify_values(self, obj, values):
+        for k, v in values.iteritems():
+            self.assertEquals(getattr(obj, k), v)
+
+    def test_set_incomplete_values_on_init(self):
+        """Set incomplete set of values at __init__ time"""
+        values = self._incomplete_value_set()
+        cls, obj = self._set_values_on_init(values)
+        self._verify_values(obj, values)
+        obj.save()
+        self.addCleanup(obj.delete)
+        self._verify_values(obj, values)
+
+    def test_object_update_incomplete(self):
+        """Set incomplete set of values using .update()"""
+        values = self._incomplete_value_set()
+        cls, obj = self._create_object_and_update(values)
+        self._verify_values(obj, values)
+        obj.save()
+        self.addCleanup(obj.delete)
+        self._verify_values(obj, values)
+
+    def test_object_setattr_incomplete(self):
+        """Set incomplete set of values using attribute access"""
+        values = self._incomplete_value_set()
+        cls, obj = self._object_create_and_setattr(values)
+        self._verify_values(obj, values)
+        obj.save()
+        self.addCleanup(obj.delete)
+        self._verify_values(obj, values)
+
+    def test_save_and_retrieve_object(self):
+        """Create object, retrieve it again by key"""
+        values = self._incomplete_value_set()
+        cls, obj = self._set_values_on_init(values)
+        obj.save()
+        self.addCleanup(obj.delete)
+        cls.get(obj.key)
+        self._verify_values(obj, values)
+
+    def test_save_delete_retrieve_failes(self):
+        """Create object, delete it, attempt to retrieve it again by key"""
+        values = self._incomplete_value_set()
+        cls, obj = self._set_values_on_init(values)
+        obj.save()
+        obj_key = obj.key
+        obj.delete()
+        self.assertRaises(NoSuchObjectError, cls.get, obj_key)
 
     def test_integer_clean(self):
-        class Person3(RiakObject):
-            bucket_name = 'users3'
+        """Integer passed as a string will be converted on .clean()"""
+        values = self._incomplete_value_set()
+        values['age'] = '32'
+        cls, obj = self._set_values_on_init(values)
+        obj.clean()
+        self.assertEquals(type(obj.age), int)
+        self.assertEquals(obj.age, 32)
 
-            first_name = String()
-            last_name = String()
-            age = Integer()
+    def test_invalid_integer_rejected(self):
+        """Integer field set to value that cannot be cast to int fails"""
+        values = self._incomplete_value_set()
+        values['age'] = 'this is not a number'
+        cls, obj = self._set_values_on_init(values)
+        self.assertRaises(ValidationError, obj.clean)
 
-        user = Person3(first_name='soren', last_name='hansen', age='32')
-        self.assertEquals(user.age, '32')
-        user.clean()
-        self.assertEquals(user.age, 32)
+    def test_missing_field_rejected(self):
+        """Unset required field causes .clean() to fail"""
+        values = self._incomplete_value_set()
+        cls, obj = self._set_values_on_init(values, last_name_required=True)
+        self.assertRaises(ValidationError, obj.clean)
 
-    def test_not_all_fields_set(self):
-        class Person4(RiakObject):
-            bucket_name = 'users4'
+    def _test_retrieve_by_values(self, searchable):
+        values = self._incomplete_value_set()
+        cls, obj = self._set_values_on_init(searchable=searchable, values=values)
+        obj.save()
+        self.addCleanup(obj.delete)
 
-            first_name = String()
-            last_name = String()
-            age = Integer()
+        results = cls.get(**values).all()
+        self.assertEquals(len(results), 1)
+        self._verify_values(obj, values)
 
-        user = Person4(first_name='soren', age=30)
-        user.save()
-        self.addCleanup(user.delete)
+    def test_retrieve_by_values_searchable(self):
+        self._test_retrieve_by_values(searchable=True)
 
-    def test_integer_validation(self):
-        class Person5(RiakObject):
-            bucket_name = 'users5'
-
-            first_name = String()
-            last_name = String()
-            age = Integer()
-
-        user = Person5(first_name='soren', last_name='hansen', age='foobar')
-        self.assertRaises(ValueError, user.clean)
-
-    def test_store_retrieve_expensive(self):
-        class Person6(RiakObject):
-            bucket_name = 'users6'
-
-            first_name = String()
-            last_name = String()
-            age = Integer()
-
-        user = Person6(first_name='soren', last_name='hansen', age=31)
-        user.save()
-        self.addCleanup(user.delete)
-        users = Person6.get(first_name='soren', last_name='hansen').all()
-        self.assertEquals(len(users), 1)
-        self.assertEquals(users[0].first_name, 'soren')
-        self.assertEquals(users[0].last_name, 'hansen')
-        self.assertEquals(users[0].age, 31)
-
-    def test_store_retrieve_cheap(self):
-        class Person7(RiakObject):
-            bucket_name = 'users7'
-            searchable = True
-
-            first_name = String()
-            last_name = String()
-            age = Integer()
-
-        user = Person7(first_name='soren', last_name='hansen', age=31)
-        user.save()
-        self.addCleanup(user.delete)
-        users = Person7.get(first_name='soren', last_name='hansen').all()
-        self.assertEquals(len(users), 1)
-        self.assertEquals(users[0].first_name, 'soren')
-        self.assertEquals(users[0].last_name, 'hansen')
-        self.assertEquals(users[0].age, 31)
-
-    def test_required_fields(self):
-        class Person8(RiakObject):
-            bucket_name = 'users8'
-            searchable = True
-
-            first_name = String(required=True)
-            last_name = String()
-
-        user = Person8(last_name='hansen', age=31)
-        self.assertRaises(ValidationError, user.save)
-        user.first_name = 'soren'
-        user.save()
-        self.addCleanup(user.delete)
+    def test_retrieve_by_values_non_searchable(self):
+        self._test_retrieve_by_values(searchable=False)
 
     def test_relation(self):
         class Person9(RiakObject):
