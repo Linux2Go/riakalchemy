@@ -17,16 +17,7 @@ except ValueError:
     supports_indexes = False
     riak_port = 10229
 
-class BasicTests(unittest.TestCase):
-    test_server_started = False
-
-    def setUp(self):
-        if not use_system_riak and not self.__class__.test_server_started:
-            riakalchemy.connect(test_server=True, port=riak_port)
-            self.__class__.test_server_started = True
-        else:
-            riakalchemy.connect(test_server=False, port=riak_port)
-
+class _BasicTests(unittest.TestCase):
     def _create_class(self, searchable=False, last_name_required=False):
         _searchable = searchable
         class Person(RiakObject):
@@ -266,3 +257,13 @@ class BasicTests(unittest.TestCase):
                                               persons[1].first_name])
         self.assertIn(persons[1].first_name, [persons[0].first_name,
                                               persons[1].first_name])
+
+class RiakBackedTests(_BasicTests):
+    test_server_started = False
+
+    def setUp(self):
+        if not use_system_riak and not self.__class__.test_server_started:
+            riakalchemy.connect(test_server=True, port=riak_port)
+            self.__class__.test_server_started = True
+        else:
+            riakalchemy.connect(test_server=False, port=riak_port)
