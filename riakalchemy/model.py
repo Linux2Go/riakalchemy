@@ -121,7 +121,7 @@ class RiakObject(object):
                   bucket = client.bucket(cls.bucket_name)
                   index_query = client.index(cls.bucket_name, '%s_bin' % (field,), '%s/%s' % (kwargs[field].bucket_name, kwargs[field].key))
                   return RiakObjectQuery(index_query, cls, True)
-        elif cls.searchable:
+        elif cls.searchable and kwargs:
             return cls.get_search(**kwargs)
         else:
             return cls.get_mr(**kwargs)
