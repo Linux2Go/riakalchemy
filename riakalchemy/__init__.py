@@ -6,6 +6,7 @@ from model import NoSuchObjectError
 global RiakObject
 global connect
 
+
 def use_real_backend():
     global RiakObject
     global connect
