@@ -5,6 +5,7 @@ from riak.mapreduce import RiakLink
 from riakalchemy.exceptions import ValidationError, NoSuchObjectError
 from riakalchemy.types import RiakType
 
+
 class RiakModelRegistry(object):
     def __init__(self):
         self._registry = []
@@ -20,6 +21,7 @@ class RiakModelRegistry(object):
                 return model
 
 _registry = RiakModelRegistry()
+
 
 class RiakObjectMeta(type):
     def __new__(cls, name, bases, attrs):
@@ -37,7 +39,6 @@ class RiakObjectMeta(type):
         new_class = super_new(cls, name, bases, attrs)
         _registry.register_model(new_class)
         return new_class
-
 
 
 class RiakObject(object):
@@ -87,8 +88,8 @@ class RiakObject(object):
                 value = getattr(self, field, [])
                 for rel in value:
                     if not isinstance(rel, RiakObject):
-                        raise ValidationError('%s attribute of %s must be another '
-                                              'RiakObject' %
+                        raise ValidationError('%s attribute of %s must be '
+                                              'another RiakObject' %
                                               (field, self.__class__.__name__))
 
                 for link in self._links:
@@ -97,7 +98,8 @@ class RiakObject(object):
                         self._links.remove(link)
 
                 for link in value:
-                    self._links += [RiakLink(link.bucket_name, link.key, tag=field)]
+                    self._links += [RiakLink(link.bucket_name,
+                                             link.key, tag=field)]
             else:
                 if hasattr(self, field):
                     value = self._meta[field].clean(getattr(self, field))
@@ -118,9 +120,13 @@ class RiakObject(object):
         if len(kwargs) == 1:
             field = kwargs.keys()[0]
             if cls._meta[field].link_type and cls._meta[field].backref:
-                  bucket = client.bucket(cls.bucket_name)
-                  index_query = client.index(cls.bucket_name, '%s_bin' % (field,), '%s/%s' % (kwargs[field].bucket_name, kwargs[field].key))
-                  return RiakObjectQuery(index_query, cls, True)
+                bucket = client.bucket(cls.bucket_name)
+                _2i_key = '%s_bin' % (field,)
+                _2i_value = ('%s/%s' % (kwargs[field].bucket_name,
+                                        kwargs[field].key))
+                index_query = client.index(cls.bucket_name,
+                                           _2i_key, _2i_value)
+                return RiakObjectQuery(index_query, cls, True)
         elif cls.searchable and kwargs:
             return cls.get_search(**kwargs)
         else:
@@ -128,14 +134,16 @@ class RiakObject(object):
 
     @classmethod
     def get_search(cls, **kwargs):
-        terms = ' AND '.join(['%s:"%s"' % (k,v) for k,v in kwargs.iteritems()])
+        terms = ' AND '.join(['%s:"%s"' % (k, v)
+                                               for k, v in kwargs.iteritems()])
         query = client.search(cls.bucket_name, terms)
         return RiakObjectQuery(query, cls, True)
 
     @classmethod
     def get_mr(cls, **kwargs):
         query = client.add(cls.bucket_name)
-        terms = ' && '.join(['true'] + ['data.%s=="%s"' % (k,v) for k,v in kwargs.iteritems()])
+        terms = (' && '.join(['true'] +
+                 ['data.%s=="%s"' % (k, v) for k, v in kwargs.iteritems()]))
         map_func = """function(v) {
                           var data = JSON.parse(v.values[0].data);
                           if(%s) {
@@ -175,7 +183,8 @@ class RiakObject(object):
             bucket.enable_search()
 
         data_dict = dict((k, getattr(self, k)) for k in self._meta
-                                                if not self._meta[k].link_type and hasattr(self, k))
+                                                if not self._meta[k].link_type
+                                                   and hasattr(self, k))
         if self._riak_obj:
             self._riak_obj.set_data(data_dict)
         else:
@@ -193,7 +202,9 @@ class RiakObject(object):
             if self._meta[field].link_type and self._meta[field].backref:
                 value = getattr(self, field)
                 for link in value:
-                    self._riak_obj.add_index('%s_bin' % (field,), '%s/%s' % (link.bucket_name, link.key))
+                    self._riak_obj.add_index('%s_bin' % (field,),
+                                             '%s/%s' % (link.bucket_name,
+                                                        link.key))
 
         self._riak_obj.store()
         self.key = self._riak_obj.get_key()
@@ -217,9 +228,11 @@ class RiakObjectQuery(object):
 client = None
 _test_server = None
 
+
 def reset_registry():
     global _registry
     _registry = RiakModelRegistry()
+
 
 def connect(host='127.0.0.1', port=8098, test_server=False):
     global client
@@ -236,6 +249,7 @@ def connect(host='127.0.0.1', port=8098, test_server=False):
         _test_server.start()
 
     client = riak.RiakClient(host=host, port=port)
+
 
 def _clear_test_connection():
     global _test_server

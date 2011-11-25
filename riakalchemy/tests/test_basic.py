@@ -17,9 +17,11 @@ except ValueError:
     supports_indexes = False
     riak_port = 10229
 
+
 class _BasicTests(unittest.TestCase):
     def _create_class(self, searchable=False, last_name_required=False):
         _searchable = searchable
+
         class Person(RiakObject):
             searchable = _searchable
             bucket_name = 'users1'
@@ -43,7 +45,7 @@ class _BasicTests(unittest.TestCase):
 
     def _incomplete_value_set(self):
         return {'first_name': 'soren',
-                'age': 31 }
+                'age': 31}
 
     def _set_values_on_init(self, values, searchable=False,
                             last_name_required=False):
@@ -58,7 +60,7 @@ class _BasicTests(unittest.TestCase):
 
     def _object_create_and_setattr(self, values):
         cls, obj = self._create_object()
-        for k,v in values.iteritems():
+        for k, v in values.iteritems():
             setattr(obj, k, v)
         return cls, obj
 
@@ -135,7 +137,8 @@ class _BasicTests(unittest.TestCase):
 
     def _test_retrieve_by_values(self, searchable):
         values = self._incomplete_value_set()
-        cls, obj = self._set_values_on_init(searchable=searchable, values=values)
+        cls, obj = self._set_values_on_init(searchable=searchable,
+                                            values=values)
         obj.save()
         self.addCleanup(obj.delete)
 
@@ -257,6 +260,7 @@ class _BasicTests(unittest.TestCase):
                                               persons[1].first_name])
         self.assertIn(persons[1].first_name, [persons[0].first_name,
                                               persons[1].first_name])
+
 
 class RiakBackedTests(_BasicTests):
     test_server_started = False
