@@ -1,5 +1,3 @@
-__version__ = '0.1a4'
-
 import model
 from model import NoSuchObjectError
 
