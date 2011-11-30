@@ -1,11 +1,10 @@
 #!/usr/bin/python
 
-import riakalchemy
 from setuptools import setup
 
 setup(
     name='riakalchemy',
-    version=riakalchemy.__version__,
+    version='0.1a4',
     description='Object Mapper for Riak',
     author='Soren Hansen',
     license='LGPL',
