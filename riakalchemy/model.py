@@ -44,12 +44,18 @@ class RiakObjectMeta(type):
 class RiakObject(object):
     __metaclass__ = RiakObjectMeta
     searchable = False
+    debug = False
 
     def __init__(self, **kwargs):
         self._links = []
         self.key = None
         self.update(kwargs)
         self._riak_obj = None
+
+    def __cmp__(self, other):
+        if type(self) != type(other):
+            return False
+        return self.key == other.key
 
     @classmethod
     def load(cls, riak_obj):
@@ -67,6 +73,7 @@ class RiakObject(object):
                 if link.get_tag() == key:
                     cls = _registry.class_by_bucket_name(link.get_bucket())
                     retval += [cls.load(link.get())]
+            setattr(self, key, retval)
             return retval
 
         raise AttributeError('No such key: %s' % (key,))
@@ -190,9 +197,13 @@ class RiakObject(object):
         else:
             self._riak_obj = bucket.new(self.key, data=data_dict)
 
-        # Remove all existing links
+        # Remove all existing links and indexes
         for l in self._riak_obj.get_links():
             self._riak_obj.remove_link(l)
+
+        indexes = self._riak_obj.get_indexes()
+        for idx in list(indexes):
+            self._riak_obj.remove_index(idx.get_field(), idx.get_value())
 
         # ..and add the new set of links
         for l in self._links:
