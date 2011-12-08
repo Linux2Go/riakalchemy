@@ -139,7 +139,7 @@ Let's take it for a spin:
 
 -->
 
-Behind the scenes, this is achieved by adding a secondary index on the objects as well as creating the link. So, when we added `jane` as a client for each for `james` and `john`, they both got a secondary index added to them: `clients_bin:people/<jane's key>'. This means that the `jane` object is not touched at all (saving a couple of round trips), and it also means that the operation is atomic.
+Behind the scenes, this is achieved by adding a secondary index on the objects as well as creating the link. So, when we added `jane` as a client for each for `james` and `john`, they both got a secondary index added to them: `clients_bin:people/<jane's key>`. This means that the `jane` object is not touched at all (saving a couple of round trips), and it also means that the operation is atomic.
 
 Just for good measure, let's see it working with multiple backrefs. So, we make John a client for James's:
 
