@@ -90,6 +90,11 @@ We've added a `clients` attribute of the RelatedObjects type. Let's create a cou
     >>> john.clients
     [<Person name='Jane Doe' age=29>]
 
+<!--
+	>>> john.delete()
+	>>> jane.delete()
+
+-->
 Behind the scenes, a link is added from the John key in Riak to the Jane key. The link is tagged as `clients`. When you access `john.clients`, all the links from the john key tagged as `clients` are returned in a list. It's worth noting that these are always lists. If you want only one element in the list, it's up to you to make sure that's always true.
 
 With the person type defined this way, it's easy to find every one of John's clients, but there's no way to find every Person who has Jane as their client.
@@ -166,6 +171,13 @@ Removing people from these relationships also works:
     >>> Person.get(clients=jane).all()
     [<Person name=u'John Doe' age=30>]
 
+<!--
+
+    >>> jane.delete()
+	>>> john.delete()
+	>>> james.delete()
+
+-->
 That should be enough to get you started! Enjoy!
 
 ## <a name="configuring-riak">Configuring Riak for RiakAlchemy</a> ##
