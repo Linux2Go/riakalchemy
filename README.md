@@ -216,9 +216,28 @@ Somewhere in your `riak_kv` section, add:
 
 >     {delete_mode, immediate}
 
+### Scripted configuration ###
+
+You can make all these config changes with this single command assuming
+your existing `app.config` is unmodified from when you installed Riak.
+
+>     sudo sed -e '/^ {riak_kv/ a {delete_mode, immediate},' \
+>              -e 's/storage_backend, riak_kv_bitcask_backend/storage_backend, riak_kv_eleveldb_backend/' \
+>              -e '/^ {riak_search/,+2 s/enabled, false/enabled, true/' -i.bak /etc/riak/app.config
+
 ## Running the tests ##
 
 At the moment, python-riak's TestServer doesn't support 2I, so we need
 access to a real Riak. To run the tests against a real Riak, use:
 
 >     $ RIAKALCHEMY_SYSTEM_RIAK_PORT=8098 nosetests .
+
+### Virtualenv ###
+
+The `tools/` directory has a script to easily create a virtualenv for you:
+
+>     $ tools/setup_virtualenv.sh
+
+Once it's done, you can run the unit tests in the virtualenv like so:
+
+>     $ RIAKALCHEMY_SYSTEM_RIAK_PORT=8098 .tools/venv_wrap.sh nosetests
