@@ -168,10 +168,12 @@ class RiakObject(object):
     @classmethod
     def get_mr(cls, **kwargs):
         query = client.add(cls.bucket_name)
-        terms = (' && '.join(['true'] +
+        terms = (' && '.join(['data'] +
                  ['data.%s=="%s"' % (k, v) for k, v in kwargs.iteritems()]))
         map_func = """function(v) {
-                          var data = JSON.parse(v.values[0].data);
+                          json_string = v.values[0].data;
+                          if (json_string == '') return [];
+                          var data = JSON.parse(json_string);
                           if(%s) {
                               return [v.key];
                           }
