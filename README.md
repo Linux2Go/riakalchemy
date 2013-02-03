@@ -166,14 +166,14 @@ We can still see who Jane is a client of:
 And John is now also a client of James:
 
     >>> Person.get(clients=john).all()
-    [<Person name='James Doe' age=31>]
+    [<Person name=u'James Doe' age=31>]
 
 Removing people from these relationships also works:
 
     >>> james.clients.remove(jane)
     >>> james.save()
     >>> Person.get(clients=jane).all()
-    [<Person name='John Doe' age=30>]
+    [<Person name=u'John Doe' age=30>]
 
 <!--
 
