@@ -268,7 +268,10 @@ def connect(host='127.0.0.1', port=8098, test_server=False):
     global client
     if test_server:
         global _test_server
-        from riak.test_server import TestServer
+        if _test_server:
+            _test_server.cleanup()
+            _test_server.stop()
+        from riak.test_server import TestServer, Atom
         import tempfile
         tmpdir = tempfile.mkdtemp()
         _test_server = TestServer(bin_dir="/usr/sbin",
