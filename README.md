@@ -32,9 +32,11 @@ Let's create a data type:
 
 Pretty straight forward.
 
-Before we can start using this, we need to connect to Riak.
+Before we can start using this, we need to connect to Riak. You can safely
+leave out the `test_server` and `port` arguments. The defaults for connect()
+matches the defaults for Riak.
 
-    >>> riakalchemy.connect()
+    >>> riakalchemy.connect(test_server=True, port=9876)
 
 Let's create a Person object:
 

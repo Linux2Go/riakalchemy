@@ -78,9 +78,9 @@ class RiakObject(object):
 
     @classmethod
     def load(cls, riak_obj):
-        obj = cls(**riak_obj.get_data())
-        obj.key = riak_obj.get_key()
-        obj._links = riak_obj.get_links()
+        obj = cls(**riak_obj.data)
+        obj.key = riak_obj.key
+        obj._links = riak_obj.links
         obj._riak_obj = riak_obj
         return obj
 
@@ -139,7 +139,7 @@ class RiakObject(object):
         if key:
             bucket = client.bucket(cls.bucket_name)
             obj = bucket.get(key)
-            if not obj.exists():
+            if not obj.exists:
                 raise NoSuchObjectError()
             return cls.load(obj)
 
@@ -168,10 +168,12 @@ class RiakObject(object):
     @classmethod
     def get_mr(cls, **kwargs):
         query = client.add(cls.bucket_name)
-        terms = (' && '.join(['true'] +
+        terms = (' && '.join(['data'] +
                  ['data.%s=="%s"' % (k, v) for k, v in kwargs.iteritems()]))
         map_func = """function(v) {
-                          var data = JSON.parse(v.values[0].data);
+                          json_string = v.values[0].data;
+                          if (json_string == '') return [];
+                          var data = JSON.parse(json_string);
                           if(%s) {
                               return [v.key];
                           }
@@ -212,7 +214,7 @@ class RiakObject(object):
                                                 if not self._meta[k].link_type
                                                    and hasattr(self, k))
         if self._riak_obj:
-            self._riak_obj.set_data(data_dict)
+            self._riak_obj.data = data_dict
         else:
             self._riak_obj = bucket.new(self.key, data=data_dict)
 
@@ -237,7 +239,7 @@ class RiakObject(object):
                                                         link.key))
 
         self._riak_obj.store()
-        self.key = self._riak_obj.get_key()
+        self.key = self._riak_obj.key
         self.post_save()
 
 
@@ -268,12 +270,17 @@ def connect(host='127.0.0.1', port=8098, test_server=False):
     global client
     if test_server:
         global _test_server
-        from riak.test_server import TestServer
+        if _test_server:
+            _test_server.cleanup()
+            _test_server.stop()
+        from riak.test_server import TestServer, Atom
         import tempfile
         tmpdir = tempfile.mkdtemp()
         _test_server = TestServer(bin_dir="/usr/sbin",
                                   tmp_dir=tmpdir,
-                                  riak_core={"web_port": port})
+                                  riak_core={"web_port": port, 'handoff_port': port + 1},
+                                  riak_kv={'pb_port': port + 2,
+                                           'delete_mode': Atom('immediate')})
         _test_server.cleanup()
         _test_server.prepare()
         _test_server.start()
