@@ -276,7 +276,9 @@ def connect(host='127.0.0.1', port=8098, test_server=False):
         tmpdir = tempfile.mkdtemp()
         _test_server = TestServer(bin_dir="/usr/sbin",
                                   tmp_dir=tmpdir,
-                                  riak_core={"web_port": port})
+                                  riak_core={"web_port": port, 'handoff_port': port + 1},
+                                  riak_kv={'pb_port': port + 2,
+                                           'delete_mode': Atom('immediate')})
         _test_server.cleanup()
         _test_server.prepare()
         _test_server.start()
