@@ -78,9 +78,9 @@ class RiakObject(object):
 
     @classmethod
     def load(cls, riak_obj):
-        obj = cls(**riak_obj.get_data())
-        obj.key = riak_obj.get_key()
-        obj._links = riak_obj.get_links()
+        obj = cls(**riak_obj.data)
+        obj.key = riak_obj.key
+        obj._links = riak_obj.links
         obj._riak_obj = riak_obj
         return obj
 
@@ -139,7 +139,7 @@ class RiakObject(object):
         if key:
             bucket = client.bucket(cls.bucket_name)
             obj = bucket.get(key)
-            if not obj.exists():
+            if not obj.exists:
                 raise NoSuchObjectError()
             return cls.load(obj)
 
@@ -212,7 +212,7 @@ class RiakObject(object):
                                                 if not self._meta[k].link_type
                                                    and hasattr(self, k))
         if self._riak_obj:
-            self._riak_obj.set_data(data_dict)
+            self._riak_obj.data = data_dict
         else:
             self._riak_obj = bucket.new(self.key, data=data_dict)
 
@@ -237,7 +237,7 @@ class RiakObject(object):
                                                         link.key))
 
         self._riak_obj.store()
-        self.key = self._riak_obj.get_key()
+        self.key = self._riak_obj.key
         self.post_save()
 
 
