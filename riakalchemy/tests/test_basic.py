@@ -11,10 +11,8 @@ system_riak = os.environ.get('RIAKALCHEMY_SYSTEM_RIAK_PORT', '')
 try:
     riak_port = int(system_riak)
     use_system_riak = True
-    supports_indexes = True
 except ValueError:
     use_system_riak = False
-    supports_indexes = False
     riak_port = 10229
 
 
@@ -225,8 +223,6 @@ class _BasicTests(unittest.TestCase):
 
         self.assertTrue(post_delete_has_run)
 
-    @unittest.skipUnless(supports_indexes, "Secondary Indexes not support by "
-                                           "the current backend")
     def test_back_relation(self):
         class Person11(RiakObject):
             bucket_name = 'users11'
