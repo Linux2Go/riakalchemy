@@ -19,6 +19,7 @@
 """
 import json
 import riak
+import riak.client
 from riak.mapreduce import RiakLink
 
 from riakalchemy.exceptions import ValidationError, NoSuchObjectError
@@ -224,7 +225,7 @@ class RiakObject(object):
 
         indexes = self._riak_obj.get_indexes()
         for idx in list(indexes):
-            self._riak_obj.remove_index(idx.get_field(), idx.get_value())
+            self._riak_obj.remove_index(*idx)
 
         # ..and add the new set of links
         for l in self._links:
@@ -285,7 +286,7 @@ def connect(host='127.0.0.1', port=8098, test_server=False):
         _test_server.prepare()
         _test_server.start()
 
-    client = riak.RiakClient(host=host, port=port)
+    client = riak.client.RiakClient(host=host, http_port=port)
 
 
 def _clear_test_connection():

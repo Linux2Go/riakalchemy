@@ -128,7 +128,7 @@ Let's take it for a spin:
     >>> john.clients = [jane]
     >>> john.save()
     >>> Person.get(clients=jane).all() # doctest: +SKIP
-    [<Person name=u'James Doe' age=31>, <Person name=u'John Doe' age=30>]
+    [<Person name='James Doe' age=31>, <Person name='John Doe' age=30>]
 
 <!---
     >>> people = Person.get(clients=jane).all()
@@ -151,7 +151,7 @@ Just for good measure, let's see it working with multiple backrefs. So, we make 
 We can still see who Jane is a client of:
 
     >>> Person.get(clients=jane).all() # doctest: +SKIP
-    [<Person name=u'James Doe' age=31>, <Person name=u'John Doe' age=30>]
+    [<Person name='James Doe' age=31>, <Person name='John Doe' age=30>]
 
 <!--
     >>> people = Person.get(clients=jane).all()
@@ -166,14 +166,14 @@ We can still see who Jane is a client of:
 And John is now also a client of James:
 
     >>> Person.get(clients=john).all()
-    [<Person name=u'James Doe' age=31>]
+    [<Person name='James Doe' age=31>]
 
 Removing people from these relationships also works:
 
     >>> james.clients.remove(jane)
     >>> james.save()
     >>> Person.get(clients=jane).all()
-    [<Person name=u'John Doe' age=30>]
+    [<Person name='John Doe' age=30>]
 
 <!--
 
