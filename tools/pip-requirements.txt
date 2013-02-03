@@ -1,4 +1,4 @@
--e git://github.com/basho/riak-python-client.git@master#egg=riak
+-e git://github.com/basho/riak-python-client.git@de963aab3#egg=riak
 nose
 yanc
 nosexcover
