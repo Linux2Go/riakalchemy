@@ -284,7 +284,7 @@ def connect(host='127.0.0.1', port=8098, test_server=False):
         _test_server.prepare()
         _test_server.start()
 
-    client = riak.client.RiakClient(host=host, http_port=port)
+    client = riak.RiakClient(host=host, http_port=port)
 
 
 def _clear_test_connection():
