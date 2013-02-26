@@ -9,7 +9,7 @@ setup(
     author='Soren Hansen',
     license='LGPL',
     author_email='soren@linux2go.dk',
-    url='https://launchpad.net/riakalchemy',
+    url='https://github.com/Linux2Go/riakalchemy',
     packages=['riakalchemy'],
     install_requires=['riak'],
     test_suite='nose.collector',
