@@ -4,12 +4,12 @@ from setuptools import setup
 
 setup(
     name='riakalchemy',
-    version='0.1a5',
+    version='0.1a6',
     description='Object Mapper for Riak',
     author='Soren Hansen',
     license='LGPL',
     author_email='soren@linux2go.dk',
-    url='https://launchpad.net/riakalchemy',
+    url='https://github.com/Linux2Go/riakalchemy',
     packages=['riakalchemy'],
     install_requires=['riak'],
     test_suite='nose.collector',
