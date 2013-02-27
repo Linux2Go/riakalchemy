@@ -88,11 +88,11 @@ class RiakObject(object):
     def __getattr__(self, key):
         if key in self._meta and self._meta[key].link_type:
             retval = []
-            links = self._riak_obj.get_links()
+            links = self._riak_obj.links
             for link in links:
-                if link.get_tag() == key:
-                    cls = _registry.class_by_bucket_name(link.get_bucket())
-                    retval += [cls.load(link.get())]
+                if link[2] == key:
+                    cls = _registry.class_by_bucket_name(link[0])
+                    retval += [cls.load(client.bucket(link[0]).get(link[1]))]
             setattr(self, key, retval)
             return retval
 
@@ -120,8 +120,8 @@ class RiakObject(object):
                                               (field, self.__class__.__name__))
 
                 for link in self._links:
-                    if link.get_tag() == field:
-                        self._riak_obj.remove_link(link)
+                    if link.tag == field:
+                        self._riak_obj.links.remove(link)
                         self._links.remove(link)
 
                 for link in value:
@@ -220,16 +220,14 @@ class RiakObject(object):
             self._riak_obj = bucket.new(self.key, data=data_dict)
 
         # Remove all existing links and indexes
-        for l in self._riak_obj.get_links():
-            self._riak_obj.remove_link(l)
+        self._riak_obj.links = []
 
-        indexes = self._riak_obj.get_indexes()
+        indexes = self._riak_obj.indexes
         for idx in list(indexes):
             self._riak_obj.remove_index(*idx)
 
         # ..and add the new set of links
-        for l in self._links:
-            self._riak_obj.add_link(l)
+        self._riak_obj.links = self._links
 
         for field in self._meta:
             if self._meta[field].link_type and self._meta[field].backref:
@@ -251,10 +249,10 @@ class RiakObjectQuery(object):
         self.gives_links = gives_links
 
     def all(self):
+        bucket = client.bucket(self.cls.bucket_name)
         if self.gives_links:
-            unwrap = lambda x: x.get()
+            unwrap = lambda x: bucket.get(x[1])
         else:
-            bucket = client.bucket(self.cls.bucket_name)
             unwrap = lambda x: bucket.get(x)
         return [self.cls.load(unwrap(x)) for x in self.query.run()]
 
