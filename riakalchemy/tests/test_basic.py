@@ -99,7 +99,7 @@ class _BasicTests(unittest.TestCase):
         cls, obj = self._set_values_on_init(values)
         obj.save()
         self.addCleanup(obj.delete)
-        cls.get(obj.key)
+        obj = cls.get(obj.key)
         self._verify_values(obj, values)
 
     def test_save_delete_retrieve_failes(self):
@@ -262,8 +262,12 @@ class RiakBackedTests(_BasicTests):
     test_server_started = False
 
     def setUp(self):
-        if not use_system_riak and not self.__class__.test_server_started:
-            riakalchemy.connect(test_server=True, port=riak_port)
-            self.__class__.test_server_started = True
+        if not use_system_riak:
+            if not self.__class__.test_server_started:
+                riakalchemy.connect(test_server=True, port=riak_port)
+                riakalchemy.model._clear_test_connection()
+                self.__class__.test_server_started = True
+            else:
+                riakalchemy.model._clear_test_connection()
         else:
             riakalchemy.connect(test_server=False, port=riak_port)
